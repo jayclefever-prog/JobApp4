@@ -113,11 +113,10 @@ const timeAgo = (dateStr) => {
   return `${Math.floor(diff / 604800)}w ago`;
 };
 
-const isPostedToday = (dateStr) => {
+const isPostedRecently = (dateStr) => {
   if (!dateStr) return false;
-  const d = new Date(dateStr * 1000);
-  const now = new Date();
-  return d.toDateString() === now.toDateString();
+  const THREE_DAYS_AGO = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  return dateStr * 1000 >= THREE_DAYS_AGO;
 };
 
 const getScheduleInfo = () => {
@@ -213,7 +212,7 @@ export default function JobApp() {
 
   // ── Cache helpers ─────────────────────────────────────────────────────────
   // Cache jobs in localStorage for 6 hours to preserve API quota
-  const CACHE_KEY = "katie_jobs_cache";
+  const CACHE_KEY = "katie_jobs_cache_v2";  // bumped version clears old cache
   const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours in ms
 
   const loadCache = () => {
@@ -297,7 +296,7 @@ export default function JobApp() {
             matchScore: score,
             tags: [j.job_employment_type || "Full-time", j.job_required_experience?.required_experience_in_months > 60 ? "Senior" : "Mid-level"].filter(Boolean),
             description: (j.job_description || "").slice(0, 300).trim() + "...",
-            isNew: isPostedToday(j.job_posted_at_timestamp),
+            isNew: isPostedRecently(j.job_posted_at_timestamp),
             url: applyLink,
           });
         });
@@ -451,7 +450,7 @@ Under 170 words.`;
   };
 
   const tabs = [
-    { id: "today", label: "New Today", count: todayJobs.length, hot: true },
+    { id: "today", label: "New (3 Days)", count: todayJobs.length, hot: true },
     { id: "existing", label: "All Jobs", count: allJobs.filter(j => !j.isNew).length },
     { id: "saved", label: "Saved", count: saved.size },
     { id: "applied", label: "Applied", count: applied.size },
@@ -607,7 +606,7 @@ Under 170 words.`;
             <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
               <p style={{ fontWeight: 600, fontSize: 15, color: "#475569" }}>
-                {tab === "today" ? "No new jobs posted today yet — check back soon" : "No jobs in this view"}
+                {tab === "today" ? "No jobs posted in the last 3 days — try refreshing" : "No jobs in this view"}
               </p>
               <p style={{ fontSize: 13, marginTop: 6 }}>Try lowering the match score filter</p>
             </div>
@@ -626,8 +625,7 @@ Under 170 words.`;
                     <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.3 }}>{job.title}</span>
-                        {job.isNew && <span style={{ background: "#052e16", color: "#4ade80", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 20, letterSpacing: "0.1em", flexShrink: 0 }}>NEW</span>}
-                        {applied.has(job.id) && <span style={{ background: "#1e1030", color: "#a78bfa", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 20, flexShrink: 0 }}>APPLIED</span>}
+                        {job.isNew && <span style={{ background: "#052e16", color: "#4ade80", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 20, letterSpacing: "0.1em", flexShrink: 0 }}>NEW</span>}                        {applied.has(job.id) && <span style={{ background: "#1e1030", color: "#a78bfa", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 20, flexShrink: 0 }}>APPLIED</span>}
                       </div>
                       <p style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{job.company} · {job.location}</p>
                     </div>
