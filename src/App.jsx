@@ -3,21 +3,14 @@ import { useState, useEffect, useCallback } from "react";
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const JSEARCH_KEY = "82c67a2db2msh8abb5ccb0daacd7p1b00c8jsn281ed9d9eac9";
 
-// Search queries — mission-driven orgs broadly, plus customer/member experience program roles
-// Great Place To Work is the model: workplace culture, employee experience, HR mission orgs
+// Search queries — trimmed to 5 to stay within free API quota (200 req/month)
+// Each query is broad enough to capture DEI, wellness, nonprofits, culture orgs, GPTW-style
 const SEARCH_QUERIES = [
-  "Customer Experience Program Manager remote",
-  "Director of Operations culture workplace remote",
-  "Chief of Staff nonprofit social impact remote",
-  "Program Manager employee experience people operations remote",
-  "Senior Operations Manager B-corp social enterprise remote",
-  "Chief of Staff mental health wellness education remote",
-  "Director Operations people first mission company remote",
-  "Program Manager customer success operations mission remote",
-  "Portfolio Manager consulting operations remote",
-  "Member Experience Program Manager nonprofit remote",
-  "Director Operations HR tech workplace culture remote",
-  "Program Manager organizational effectiveness remote",
+  "Director Operations Chief of Staff mission driven remote",
+  "Program Manager people culture employee experience remote",
+  "Chief of Staff nonprofit social impact wellness remote",
+  "Customer Experience Program Manager culture organization remote",
+  "Senior Operations Manager social enterprise B-corp remote",
 ];
 
 // Role keywords — what the JOB involves
@@ -218,8 +211,40 @@ export default function JobApp() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
+  // ── Cache helpers ─────────────────────────────────────────────────────────
+  // Cache jobs in localStorage for 6 hours to preserve API quota
+  const CACHE_KEY = "katie_jobs_cache";
+  const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours in ms
+
+  const loadCache = () => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const { jobs, timestamp } = JSON.parse(raw);
+      if (Date.now() - timestamp > CACHE_TTL) return null; // expired
+      return { jobs, timestamp };
+    } catch { return null; }
+  };
+
+  const saveCache = (jobs) => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ jobs, timestamp: Date.now() }));
+    } catch { /* storage full, ignore */ }
+  };
+
   // ── Fetch live jobs from JSearch ──────────────────────────────────────────
   const fetchJobs = useCallback(async (isRefresh = false) => {
+    // Check cache first — skip API call if data is fresh (unless manual refresh)
+    if (!isRefresh) {
+      const cached = loadCache();
+      if (cached) {
+        setAllJobs(cached.jobs);
+        setLastFetched(new Date(cached.timestamp));
+        setLoading(false);
+        return;
+      }
+    }
+
     if (isRefresh) setRefreshing(true); else setLoading(true);
     setFetchError(null);
     const seen = new Set();
@@ -291,19 +316,18 @@ export default function JobApp() {
     if (results.length === 0) {
       setFetchError("No jobs returned from API. Check your key or try again.");
     }
+    saveCache(results);
     setAllJobs(results);
     setLastFetched(new Date());
     setLoading(false);
     setRefreshing(false);
   }, []);
 
-  // Schedule ticker
+  // Schedule ticker — no auto-refresh to preserve API quota
   useEffect(() => {
     fetchJobs();
     const schedTick = setInterval(() => setScheduleInfo(getScheduleInfo()), 1000);
-    // Auto-refresh jobs every 30 minutes
-    const refreshTick = setInterval(() => fetchJobs(true), 30 * 60 * 1000);
-    return () => { clearInterval(schedTick); clearInterval(refreshTick); };
+    return () => clearInterval(schedTick);
   }, [fetchJobs]);
 
   const todayJobs = allJobs.filter(j => j.isNew);
@@ -461,7 +485,7 @@ Under 170 words.`;
                 <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Live · JSearch API · LinkedIn · Indeed · Glassdoor</span>
                 {lastFetched && (
                   <span style={{ fontSize: 10, color: "#1e293b", marginLeft: 8 }}>
-                    Updated {lastFetched.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    Cached · refreshes every 6h · {lastFetched.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 )}
               </div>
