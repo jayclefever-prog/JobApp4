@@ -8,9 +8,10 @@ const JSEARCH_KEY = "82c67a2db2msh8abb5ccb0daacd7p1b00c8jsn281ed9d9eac9";
 const SEARCH_QUERIES = [
   "Director Operations Chief of Staff mission driven remote",
   "Program Manager people culture employee experience remote",
-  "Chief of Staff nonprofit social impact wellness remote",
+  "Chief of Staff mental health wellness education remote",
   "Customer Experience Program Manager culture organization remote",
   "Senior Operations Manager social enterprise B-corp remote",
+  "Program Manager organizational effectiveness remote",
 ];
 
 // Role keywords — what the JOB involves
